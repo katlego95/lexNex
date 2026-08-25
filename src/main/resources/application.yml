@@ -30,3 +30,14 @@ management:
   endpoint:
     health:
       show-details: always
+      # Liveness restarts the container; readiness only removes it from the load balancer. An
+      # instance that cannot compile its schema should stop receiving documents, not be killed.
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,pipeline
+  metrics:
+    tags:
+      # Every series is attributable to a service and an instance once several pods report.
+      application: ${spring.application.name}

@@ -69,6 +69,16 @@ public class XsltTransformService {
                 base, NORMALIZED_JSON_STYLESHEET, FULL_TEXT_STYLESHEET);
     }
 
+    /** @return true once every stylesheet is compiled and documents can be transformed. */
+    public boolean isReady() {
+        return normalizedJson != null && fullText != null;
+    }
+
+    /** @return the stylesheets compiled at startup, for the readiness report. */
+    public List<String> stylesheets() {
+        return List.of(NORMALIZED_JSON_STYLESHEET, FULL_TEXT_STYLESHEET);
+    }
+
     /** @return the normalized JSON artifact for a document that has already passed validation. */
     public String toNormalizedJson(Resource document) {
         return transform(normalizedJson, document, NORMALIZED_JSON_STYLESHEET);

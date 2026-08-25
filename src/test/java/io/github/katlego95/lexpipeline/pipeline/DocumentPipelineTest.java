@@ -12,6 +12,8 @@ import io.github.katlego95.lexpipeline.config.AppProperties;
 import io.github.katlego95.lexpipeline.config.HardenedXmlReaderFactory;
 import io.github.katlego95.lexpipeline.identity.ContentIdentityException;
 import io.github.katlego95.lexpipeline.identity.ContentIdentityReader;
+import io.github.katlego95.lexpipeline.observability.PipelineMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.github.katlego95.lexpipeline.store.ArtifactStore;
 import io.github.katlego95.lexpipeline.store.Manifest;
 import io.github.katlego95.lexpipeline.store.StorageFailedException;
@@ -85,7 +87,8 @@ class DocumentPipelineTest {
             ContentIdentityReader identity, long maxDocBytes) {
         return new DocumentPipeline(
                 new XsdValidationService(properties(maxDocBytes), loader, readers),
-                identity, transform, new ChunkBuilder(), artifactStore, clock);
+                identity, transform, new ChunkBuilder(), artifactStore, clock,
+                new PipelineMetrics(new SimpleMeterRegistry()));
     }
 
     private static Resource sample(String name) {

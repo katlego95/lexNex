@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Same content_id as valid-judgment.xml, one paragraph corrected.
+     Expected outcome: SUPERSEDED as version 2, with version 1 marked supersededBy: 2 in
+     manifest.json and its artifacts left in place so existing citations still resolve.
+     Posting valid-judgment.xml twice instead gives DUPLICATE_NOOP: identical bytes, no new
+     version. -->
+<judgment xmlns="urn:lex:content:1">
+  <header>
+    <content_id>FR-2024-CC-000777</content_id>
+    <title>Cour de cassation, chambre commerciale, 14 mai 2024, n° 22/00777</title>
+    <court>Cour de cassation</court>
+    <jurisdiction>FR</jurisdiction>
+    <decision_date>2024-05-14</decision_date>
+    <citations>
+      <citation type="ECLI">ECLI:FR:CCASS:2024:CO00777</citation>
+      <citation type="NOR">NOR:JUSC2400777A</citation>
+    </citations>
+    <parties>
+      <party role="appellant">Société Delta Distribution</party>
+      <party role="respondent">SARL Martin et Fils</party>
+    </parties>
+  </header>
+  <body>
+    <section type="facts">
+      <p id="p1">La société Delta Distribution a conclu un contrat de fourniture avec la SARL Martin et Fils le 3 février 2021.</p>
+      <p id="p2">Le contrat a été résilié unilatéralement le 12 septembre 2022.</p>
+    </section>
+    <section type="reasons">
+      <p id="p3">Considérant que la rupture d'une relation commerciale établie doit être précédée d'un préavis écrit tenant compte de la durée de la relation.</p>
+      <p id="p4">Attendu que le préavis de quinze jours accordé en l'espèce est manifestement insuffisant au regard d'une relation de plus de vingt-quatre mois.</p>
+    </section>
+    <section type="disposition">
+      <p id="p5">Par ces motifs, la Cour rejette le pourvoi et condamne la demanderesse aux dépens.</p>
+    </section>
+  </body>
+</judgment>

@@ -1,6 +1,8 @@
 package io.github.katlego95.lexpipeline.pipeline;
 
 import io.github.katlego95.lexpipeline.identity.ContentIdentity;
+import io.github.katlego95.lexpipeline.observability.PipelineMetrics;
+import io.github.katlego95.lexpipeline.observability.PipelineMetrics.Stage;
 import io.github.katlego95.lexpipeline.identity.ContentIdentityException;
 import io.github.katlego95.lexpipeline.identity.ContentIdentityReader;
 import io.github.katlego95.lexpipeline.store.ArtifactSet;
@@ -22,6 +24,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.EnumMap;
+import java.util.function.Supplier;
+import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
@@ -57,6 +62,7 @@ public class DocumentPipeline {
     private final ChunkBuilder chunkBuilder;
     private final ArtifactStore store;
     private final Clock clock;
+    private final PipelineMetrics metrics;
 
     /**
      * One lock per judgment, created on demand. Never removed: entries are small, bounded by the
@@ -68,25 +74,44 @@ public class DocumentPipeline {
 
     public DocumentPipeline(XsdValidationService validation, ContentIdentityReader identityReader,
             XsltTransformService transform, ChunkBuilder chunkBuilder, ArtifactStore store,
-            Clock clock) {
+            Clock clock, PipelineMetrics metrics) {
         this.validation = validation;
         this.identityReader = identityReader;
         this.transform = transform;
         this.chunkBuilder = chunkBuilder;
         this.store = store;
         this.clock = clock;
+        this.metrics = metrics;
     }
 
+    /**
+     * Processes one document and records what happened — in the metrics, in the log, and in the
+     * returned result. All three describe the same event, which is what makes an alert on the
+     * quarantine rate traceable to the exact line that produced it.
+     */
     public PipelineResult process(Resource document, String sourceName) {
+        metrics.documentReceived();
+        StageTimings timings = new StageTimings();
+        long startedNanos = System.nanoTime();
+
+        PipelineResult result = run(document, sourceName, timings);
+
+        metrics.record(result.outcome());
+        logOutcome(result, sourceName, timings, Duration.ofNanos(System.nanoTime() - startedNanos));
+        return result;
+    }
+
+    private PipelineResult run(Resource document, String sourceName, StageTimings timings) {
         try {
-            ValidationResult validationResult = validation.validate(document);
+            ValidationResult validationResult =
+                    timed(Stage.VALIDATE, timings, () -> validation.validate(document));
             if (!validationResult.valid()) {
                 return quarantine(document, sourceName, null,
                         outcomeOf(validationResult.status()), validationResult.diagnostics());
             }
 
             ContentIdentity identity = identityReader.identify(document);
-            return publishUnderLock(document, identity, sourceName);
+            return publishUnderLock(document, identity, sourceName, timings);
 
         } catch (ContentIdentityException e) {
             // Unreachable in theory: validation proved a content_id exists.
@@ -107,7 +132,7 @@ public class DocumentPipeline {
      * nothing inside it touches another.
      */
     private PipelineResult publishUnderLock(Resource document, ContentIdentity identity,
-            String sourceName) {
+            String sourceName, StageTimings timings) {
         ReentrantLock lock = locks.computeIfAbsent(identity.contentId(), id -> new ReentrantLock());
         lock.lock();
         try {
@@ -125,8 +150,10 @@ public class DocumentPipeline {
             }
 
             int version = manifest.nextVersion();
-            ArtifactSet artifacts = buildArtifacts(document, version);
-            store.publish(identity.contentId(), version, identity.sha256(), artifacts);
+            ArtifactSet artifacts =
+                    timed(Stage.TRANSFORM, timings, () -> buildArtifacts(document, version));
+            timed(Stage.PUBLISH, timings,
+                    () -> store.publish(identity.contentId(), version, identity.sha256(), artifacts));
 
             Outcome outcome = version == 1 ? Outcome.PUBLISHED : Outcome.SUPERSEDED;
             return PipelineResult.published(outcome, identity.contentId(), version,
@@ -164,6 +191,59 @@ public class DocumentPipeline {
         store.quarantine(record, outcome == Outcome.OVERSIZE ? null : document);
 
         return PipelineResult.quarantined(outcome, contentId, ingestId, diagnostics);
+    }
+
+    /**
+     * Times a stage, records it, and lets the failure through unchanged. Timing happens in a
+     * finally block on purpose: a stage that failed slowly is exactly the one worth seeing on a
+     * dashboard, and dropping its duration would hide it.
+     */
+    private <T> T timed(Stage stage, StageTimings timings, Supplier<T> work) {
+        long start = System.nanoTime();
+        try {
+            return work.get();
+        } finally {
+            Duration took = Duration.ofNanos(System.nanoTime() - start);
+            timings.record(stage, took);
+            metrics.record(stage, took);
+        }
+    }
+
+    /**
+     * One line per document, key=value, always the same keys in the same order.
+     *
+     * <p>Deliberately not a sentence: this is read by grep and by a log aggregator far more often
+     * than by a person, and a stable shape is what makes "show me every SCHEMA_INVALID from this
+     * source today" a one-line query. Production would swap the encoder for JSON; the fields are
+     * already chosen for that.
+     */
+    private void logOutcome(PipelineResult result, String sourceName, StageTimings timings,
+            Duration total) {
+        log.info("document processed source={} contentId={} outcome={} version={} sha256={} "
+                        + "validateMs={} transformMs={} publishMs={} totalMs={} ingestId={} "
+                        + "diagnostics={}",
+                or(sourceName), or(result.contentId()), result.outcome(), or(result.version()),
+                or(result.sha256()), timings.millis(Stage.VALIDATE),
+                timings.millis(Stage.TRANSFORM), timings.millis(Stage.PUBLISH), total.toMillis(),
+                or(result.ingestId()), result.diagnostics().size());
+    }
+
+    private Object or(Object value) {
+        return value == null ? "-" : value;
+    }
+
+    /** Per-document stage durations, kept only long enough to write one log line. */
+    private static final class StageTimings {
+
+        private final EnumMap<Stage, Duration> durations = new EnumMap<>(Stage.class);
+
+        void record(Stage stage, Duration duration) {
+            durations.merge(stage, duration, Duration::plus);
+        }
+
+        long millis(Stage stage) {
+            return durations.getOrDefault(stage, Duration.ZERO).toMillis();
+        }
     }
 
     private Outcome outcomeOf(ValidationResult.Status status) {

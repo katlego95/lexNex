@@ -67,14 +67,26 @@ public class XsdValidationService {
     private final Schema schema;
     private final long maxDocBytes;
     private final HardenedXmlReaderFactory readerFactory;
+    private final String schemaLocation;
 
     public XsdValidationService(AppProperties properties, ResourceLoader resourceLoader,
             HardenedXmlReaderFactory readerFactory) {
         this.maxDocBytes = properties.maxDocBytes();
         this.readerFactory = readerFactory;
+        this.schemaLocation = properties.xsdPath();
         this.schema = compileSchema(resourceLoader.getResource(properties.xsdPath()));
         log.info("XSD compiled from {} (max document size {} bytes)",
                 properties.xsdPath(), this.maxDocBytes);
+    }
+
+    /** @return true once the schema is compiled and this service can act as the trust gate. */
+    public boolean isReady() {
+        return schema != null;
+    }
+
+    /** @return the location the schema was compiled from, for the readiness report. */
+    public String schemaLocation() {
+        return schemaLocation;
     }
 
     /**

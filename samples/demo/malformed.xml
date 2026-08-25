@@ -1,0 +1,10 @@
+Rapport d'export du 14 mai 2024 — 3 décisions transmises.
+
+Expected outcome: MALFORMED_XML, quarantined, never published. This is what a feed actually ships
+when an export job fails: a status report or a truncated file with an .xml extension. It is not
+well-formed XML at all, so the parser never gets far enough to check the schema — which is why the
+outcome is MALFORMED_XML rather than SCHEMA_INVALID, and why its diagnostics carry no cvc- code.
+
+<judgment xmlns="urn:lex:content:1">
+  <header>
+    <content_id>FR-2024-CC-000779</content_id>

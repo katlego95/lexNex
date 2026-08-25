@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.github.katlego95.lexpipeline.config.AppProperties;
 import io.github.katlego95.lexpipeline.config.HardenedXmlReaderFactory;
 import io.github.katlego95.lexpipeline.identity.ContentIdentityReader;
+import io.github.katlego95.lexpipeline.observability.PipelineMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.github.katlego95.lexpipeline.pipeline.DocumentPipeline;
 import io.github.katlego95.lexpipeline.pipeline.Outcome;
 import io.github.katlego95.lexpipeline.store.ArtifactStore;
@@ -56,7 +58,8 @@ class BatchServiceTest {
                 new XsltTransformService(properties, loader, readers),
                 new ChunkBuilder(),
                 new ArtifactStore(properties, clock),
-                clock);
+                clock,
+                new PipelineMetrics(new SimpleMeterRegistry()));
         batchService = new BatchService(pipeline, new JobRegistry(clock), properties, clock);
         return batchService;
     }
@@ -324,7 +327,8 @@ class BatchServiceTest {
         DocumentPipeline pipeline = new DocumentPipeline(
                 new XsdValidationService(properties, loader, readers), new ContentIdentityReader(),
                 new XsltTransformService(properties, loader, readers), new ChunkBuilder(),
-                new ArtifactStore(properties, clock), clock);
+                new ArtifactStore(properties, clock), clock,
+                new PipelineMetrics(new SimpleMeterRegistry()));
         batchService = new BatchService(pipeline, registry, properties, clock);
 
         BatchJob job = awaitCompletion(batchService.submit(null));
