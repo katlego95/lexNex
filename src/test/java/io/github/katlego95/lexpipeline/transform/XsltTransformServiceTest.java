@@ -36,7 +36,7 @@ class XsltTransformServiceTest {
 
     private final XsltTransformService service = new XsltTransformService(
             new AppProperties("classpath:schema/judgment.xsd", "classpath:xslt/", "target/unused",
-                    10L << 20),
+                    "target/unused", 1, 1, 10L << 20),
             new DefaultResourceLoader(),
             new HardenedXmlReaderFactory());
 
@@ -318,7 +318,7 @@ class XsltTransformServiceTest {
     void aMissingStylesheetIsAStartupFailureNotAPerDocumentSurprise() {
         assertThatThrownBy(() -> new XsltTransformService(
                 new AppProperties("classpath:schema/judgment.xsd", "classpath:no-such-dir/",
-                        "target/unused", 1024),
+                        "target/unused", "target/unused", 1, 1, 1024),
                 new DefaultResourceLoader(),
                 new HardenedXmlReaderFactory()))
                 .isInstanceOf(IllegalStateException.class)

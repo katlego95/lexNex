@@ -37,7 +37,7 @@ class ArtifactStoreTest {
     void setUp() {
         store = new ArtifactStore(
                 new AppProperties("classpath:schema/judgment.xsd", "classpath:xslt/",
-                        outputDir.toString(), 1024),
+                        outputDir.toString(), "target/unused", 1, 1, 1024),
                 Clock.fixed(FIXED, ZoneOffset.UTC));
     }
 
@@ -181,7 +181,7 @@ class ArtifactStoreTest {
         private ArtifactStore storeThatDiesBetweenFulltextAndChunks() {
             return new ArtifactStore(
                     new AppProperties("classpath:schema/judgment.xsd", "classpath:xslt/",
-                            outputDir.toString(), 1024),
+                            outputDir.toString(), "target/unused", 1, 1, 1024),
                     Clock.fixed(FIXED, ZoneOffset.UTC)) {
                 @Override
                 void writeArtifacts(Path stagingDir, ArtifactSet artifacts) throws IOException {

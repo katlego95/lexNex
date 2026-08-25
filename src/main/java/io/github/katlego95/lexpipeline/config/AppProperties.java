@@ -19,11 +19,20 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *                     created beneath it. A plain filesystem path, not a Spring resource location,
  *                     because this one is written to as well as read. Env var
  *                     {@code APP_OUTPUT_DIR}.
+ * @param inputDir     root the batch scanner reads from. A batch request may name a subdirectory
+ *                     of it and nothing else — the request must not be able to point the service
+ *                     at an arbitrary path on the host. Env var {@code APP_INPUT_DIR}.
+ * @param concurrency  number of worker threads processing documents. Env var
+ *                     {@code APP_CONCURRENCY}.
+ * @param queueCapacity how many discovered documents may wait in front of the workers. Bounded on
+ *                     purpose: it is the difference between backpressure and an OOM.
+ *                     Env var {@code APP_QUEUE_CAPACITY}.
  * @param maxDocBytes  hard ceiling on a single document, enforced before any parsing begins.
  *                     Env var {@code APP_MAX_DOC_BYTES}.
  */
 @ConfigurationProperties(prefix = "app")
-public record AppProperties(String xsdPath, String xsltPath, String outputDir, long maxDocBytes) {
+public record AppProperties(String xsdPath, String xsltPath, String outputDir, String inputDir,
+        int concurrency, int queueCapacity, long maxDocBytes) {
 
     /** Tolerates {@code classpath:xslt} as well as {@code classpath:xslt/} in the env var. */
     public String xsltPath() {

@@ -74,7 +74,7 @@ class DocumentPipelineTest {
 
     private AppProperties properties(long maxDocBytes) {
         return new AppProperties("classpath:schema/judgment.xsd", "classpath:xslt/",
-                outputDir.toString(), maxDocBytes);
+                outputDir.toString(), "target/unused", 1, 1, maxDocBytes);
     }
 
     private XsltTransformService transformService(long maxDocBytes) {

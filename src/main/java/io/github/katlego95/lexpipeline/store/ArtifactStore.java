@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
@@ -217,6 +218,35 @@ public class ArtifactStore {
                 record.sourceName(), record.reason(), record.diagnostics().size());
     }
 
+    /**
+     * Reads one published artifact.
+     *
+     * <p>The version must be named by the manifest. That is the same rule the publish path
+     * enforces from the other side: an uncommitted {@code v{N}} directory can exist on disk after
+     * a failed attempt, and serving out of it would hand a client a version the store does not
+     * consider published. Going through the manifest is what makes "committed" mean one thing.
+     *
+     * @param version the version to read, or empty for whichever is current
+     */
+    public Optional<Resource> readArtifact(String contentId, Optional<Integer> version,
+            ArtifactKind kind) {
+        Optional<Manifest> manifest = readManifest(contentId);
+        if (manifest.isEmpty()) {
+            return Optional.empty();
+        }
+        Optional<Integer> resolved = version.isPresent()
+                ? manifest.get().versions().stream()
+                        .map(Manifest.Version::version)
+                        .filter(version.get()::equals)
+                        .findFirst()
+                : manifest.get().latest().map(Manifest.Version::version);
+
+        return resolved
+                .map(v -> versionDir(contentId, v).resolve(kind.fileName()))
+                .filter(Files::isRegularFile)
+                .map(FileSystemResource::new);
+    }
+
     public Path publishedDir(String contentId) {
         return outputDir.resolve(PUBLISHED).resolve(sanitize(contentId));
     }
@@ -316,10 +346,18 @@ public class ArtifactStore {
      * than escaped, because a judgment id has no business containing those characters.
      */
     private String sanitize(String id) {
-        if (id == null || id.isBlank() || !id.matches("[A-Za-z0-9._:-]{1,128}")) {
+        if (!isSafeId(id)) {
             throw new StorageFailedException(
                     "Refusing to use \"" + id + "\" as a path segment", null);
         }
         return id;
+    }
+
+    /**
+     * Public so the API can reject a hostile identifier as a client error before it ever reaches
+     * the store, rather than letting it surface as an internal failure.
+     */
+    public static boolean isSafeId(String id) {
+        return id != null && id.matches("[A-Za-z0-9._:-]{1,128}");
     }
 }

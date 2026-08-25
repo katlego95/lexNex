@@ -29,7 +29,7 @@ class XsdValidationServiceTest {
     private static XsdValidationService serviceWithLimit(long maxDocBytes) {
         return new XsdValidationService(
                 new AppProperties("classpath:schema/judgment.xsd", "classpath:xslt/", "target/unused",
-                        maxDocBytes),
+                        "target/unused", 1, 1, maxDocBytes),
                 new DefaultResourceLoader(),
                 new HardenedXmlReaderFactory());
     }
