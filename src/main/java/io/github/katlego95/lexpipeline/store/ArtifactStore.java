@@ -92,6 +92,27 @@ public class ArtifactStore {
         log.info("Artifact store rooted at {}", outputDir.toAbsolutePath());
     }
 
+    /**
+     * @return the quarantine record filed under this ingest id, or empty if there is none. Unsafe
+     *         ids return empty rather than throwing: to a caller, an id that cannot exist and an
+     *         id that does not exist are the same 404.
+     */
+    public Optional<QuarantineRecord> readQuarantineRecord(String ingestId) {
+        if (!isSafeId(ingestId)) {
+            return Optional.empty();
+        }
+        Path diagnostics = quarantineDir(ingestId).resolve(DIAGNOSTICS);
+        if (!Files.isRegularFile(diagnostics)) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(mapper.readValue(
+                    Files.readString(diagnostics, StandardCharsets.UTF_8), QuarantineRecord.class));
+        } catch (IOException e) {
+            throw new StorageFailedException("Could not read quarantine record " + ingestId, e);
+        }
+    }
+
     /** @return the manifest for this judgment, or empty if nothing has ever been published for it. */
     public Optional<Manifest> readManifest(String contentId) {
         Path manifest = publishedDir(contentId).resolve(MANIFEST);

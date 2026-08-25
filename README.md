@@ -61,8 +61,11 @@ Submit one document (synchronous, returns the outcome):
     curl -X POST localhost:8080/api/v1/documents \
       -H 'Content-Type: application/xml' \
       --data-binary @samples/demo/invalid-date.xml
-    # 400 application/problem+json: outcome SCHEMA_INVALID, one diagnostic per problem with
-    # line, column and the cvc- error code
+    # 400 application/problem+json: outcome SCHEMA_INVALID, an ingestId, a quarantine link, and
+    # one diagnostic per problem with line, column and the cvc- error code
+
+    curl -s localhost:8080/api/v1/quarantine/$INGEST_ID | jq
+    # {"status":"SCHEMA_INVALID","sourceName":"...","receivedAt":"...","diagnostics":[...]}
 
 Submit a batch (async, returns a batchId immediately):
 

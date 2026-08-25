@@ -168,6 +168,36 @@ class DocumentApiTest {
     }
 
     @Test
+    void aRejectedDocumentIsRetrievableFromQuarantineByItsIngestId() throws Exception {
+        String problem = mvc.perform(post("/api/v1/documents")
+                        .contentType(MediaType.APPLICATION_XML)
+                        .content(sample("duplicate-paragraph-id.xml")))
+                .andExpect(status().isBadRequest())
+                // The 400 says where the rejection was filed, so a client that drops this response
+                // can still come back for the original and the diagnostics.
+                .andExpect(jsonPath("$.quarantine").isNotEmpty())
+                .andReturn().getResponse().getContentAsString();
+        String ingestId = com.fasterxml.jackson.databind.json.JsonMapper.builder().build()
+                .readTree(problem).get("ingestId").asText();
+
+        mvc.perform(get("/api/v1/quarantine/{id}", ingestId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ingestId").value(ingestId))
+                .andExpect(jsonPath("$.status").value("SCHEMA_INVALID"))
+                .andExpect(jsonPath("$.sourceName").isNotEmpty())
+                .andExpect(jsonPath("$.receivedAt").isNotEmpty())
+                .andExpect(jsonPath("$.diagnostics[?(@.code == 'cvc-id.2')]").exists());
+    }
+
+    @Test
+    void anUnknownQuarantineIdIsNotFoundInProblemJson() throws Exception {
+        mvc.perform(get("/api/v1/quarantine/{id}", "00000000-0000-0000-0000-000000000000"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.title").value("Quarantine record not found"));
+    }
+
+    @Test
     void malformedXmlIsAClientError() throws Exception {
         mvc.perform(post("/api/v1/documents")
                         .contentType(MediaType.APPLICATION_XML)

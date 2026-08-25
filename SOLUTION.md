@@ -109,6 +109,10 @@ liveness are separate probes; and the container runs non-root.
 | `STORAGE_FAILED` | 500 | ours, retryable | no, storage is what failed |
 | `INTERNAL_ERROR` | 500 | ours | no |
 
+Every 4xx body carries the `ingestId` and a `quarantine` link, and
+`GET /api/v1/quarantine/{ingestId}` returns the status, source, timestamp and full diagnostics, so
+a rejection stays retrievable after the response that reported it is gone.
+
 ## 5. Big documents: where the memory goes
 
 | Stage | In memory | Bound |

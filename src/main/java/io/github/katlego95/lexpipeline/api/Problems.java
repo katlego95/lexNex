@@ -52,6 +52,9 @@ final class Problems {
         }
         if (result.ingestId() != null) {
             problem.setProperty("ingestId", result.ingestId());
+            // Where the original document and the full diagnostics were filed, so a client can
+            // come back for them without having kept this response.
+            problem.setProperty("quarantine", "/api/v1/quarantine/" + result.ingestId());
         }
         if (!result.diagnostics().isEmpty()) {
             problem.setProperty("diagnostics", result.diagnostics().stream()
