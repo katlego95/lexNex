@@ -2,6 +2,11 @@ spring:
   application:
     name: lexpipeline
 
+# Every setting is overridable by env var so the container needs no rebuild to be reconfigured.
+app:
+  xsd-path: ${APP_XSD_PATH:classpath:schema/judgment.xsd}
+  max-doc-bytes: ${APP_MAX_DOC_BYTES:10485760}   # 10 MiB
+
 server:
   port: ${SERVER_PORT:8080}
 

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Well-formed, schema-invalid: p/@id is typed xs:ID, which is document-unique. p2 appears twice.
+     This one matters commercially: paragraph ids are citation anchors, so a duplicate id would
+     make one citation resolve to two different passages. -->
+<judgment xmlns="urn:lex:content:1">
+  <header>
+    <content_id>FR-2024-CA-000125</content_id>
+    <title>Cour d'appel de Paris, 12 mars 2024, n° 20/01234</title>
+    <court>Cour d'appel de Paris</court>
+    <jurisdiction>FR</jurisdiction>
+    <decision_date>2024-03-12</decision_date>
+  </header>
+  <body>
+    <section type="reasons">
+      <p id="p2">Considérant que...</p>
+      <p id="p2">Attendu que...</p>
+    </section>
+  </body>
+</judgment>

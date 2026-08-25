@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Well-formed, schema-invalid: p/@id is use="required" and the second paragraph has none.
+     A paragraph with no id cannot be cited, so the schema refuses it. -->
+<judgment xmlns="urn:lex:content:1">
+  <header>
+    <content_id>FR-2024-CA-000126</content_id>
+    <title>Cour d'appel de Paris, 12 mars 2024, n° 20/01234</title>
+    <court>Cour d'appel de Paris</court>
+    <jurisdiction>FR</jurisdiction>
+    <decision_date>2024-03-12</decision_date>
+  </header>
+  <body>
+    <section type="reasons">
+      <p id="p1">Considérant que...</p>
+      <p>Attendu que...</p>
+    </section>
+  </body>
+</judgment>

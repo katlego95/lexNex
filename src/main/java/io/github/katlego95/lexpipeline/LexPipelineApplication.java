@@ -2,6 +2,7 @@ package io.github.katlego95.lexpipeline;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 /**
  * Entry point for the legal content transformation service.
@@ -11,6 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * artifacts keyed by content_id.
  */
 @SpringBootApplication
+@ConfigurationPropertiesScan
 public class LexPipelineApplication {
 
     public static void main(String[] args) {

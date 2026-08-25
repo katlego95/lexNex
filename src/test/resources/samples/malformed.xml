@@ -1,0 +1,4 @@
+This is not XML at all: the feed shipped a truncated file.
+<judgment xmlns="urn:lex:content:1">
+  <header>
+    <content_id>FR-2024-CA-000127</content_id>

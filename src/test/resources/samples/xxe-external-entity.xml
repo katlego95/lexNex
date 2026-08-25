@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE judgment [
+  <!ENTITY secret SYSTEM "file:///etc/passwd">
+]>
+<!-- The classic XXE payload, kept as a regression test for the hardening. With
+     ACCESS_EXTERNAL_DTD set to "" the parser refuses to fetch the entity instead of pasting the
+     server's password file into a paragraph we would then index and serve. -->
+<judgment xmlns="urn:lex:content:1">
+  <header>
+    <content_id>FR-2024-CA-000128</content_id>
+    <title>Cour d'appel de Paris, 12 mars 2024, n° 20/01234</title>
+    <court>Cour d'appel de Paris</court>
+    <jurisdiction>FR</jurisdiction>
+    <decision_date>2024-03-12</decision_date>
+  </header>
+  <body>
+    <section type="facts">
+      <p id="p1">&secret;</p>
+    </section>
+  </body>
+</judgment>
