@@ -13,7 +13,7 @@ Java 21+ and Maven (or just Docker).
 
 ## Loom
 Demo: https://www.loom.com/share/08be1d3196254d4baf2bedf5ab4da918
-Walkthrough: 
+Walkthrough: https://www.loom.com/share/39e55595037f44bd8df5cfe11536eebc
 
 ## Run
 
