@@ -1,6 +1,3 @@
-<!-- DRAFT for Katli's edit — structure follows 05_README_TEMPLATE.md; every command below was run
-     against this build. Delete this comment before submitting. -->
-
 # Legal Content Transformation Service
 
 Ingests French legal judgment XML, validates it against an XSD (JDK/Xerces), transforms valid
@@ -20,10 +17,10 @@ Local:
 
     ./mvnw spring-boot:run
 
-Docker:
+Docker, with the demo documents mounted as the input folder:
 
     docker build -t lexpipeline .
-    mkdir -p data/in data/out
+    mkdir -p data/out
     docker run --rm -p 8080:8080 \
       -v "$PWD/samples/demo:/data/in:ro" \
       -v "$PWD/data/out:/data/out" \
@@ -36,19 +33,18 @@ Configuration (env vars, all optional, sensible defaults):
 
 | Variable | Default | Purpose |
 |---|---|---|
-| APP_INPUT_DIR | ./data/in (container: /data/in) | batch source folder; nothing outside it is read |
-| APP_OUTPUT_DIR | ./data/out (container: /data/out) | artifact store root |
+| APP_INPUT_DIR | ./data/in (container /data/in) | batch source folder; nothing outside it is read |
+| APP_OUTPUT_DIR | ./data/out (container /data/out) | artifact store root |
 | APP_CONCURRENCY | 4 | batch worker count |
-| APP_QUEUE_CAPACITY | 64 | bounded work queue; full means batch blocks, single POST returns 429 |
+| APP_QUEUE_CAPACITY | 64 | bounded work queue; when full, batch blocks and POST returns 429 |
 | APP_MAX_DOC_BYTES | 10485760 | oversize guard |
 | APP_XSD_PATH / APP_XSLT_PATH | classpath defaults | schema / stylesheet locations |
 | SERVER_PORT | 8080 | HTTP port |
 
 ## Use
 
-Four demo documents are committed in [`samples/demo/`](samples/demo) — a valid judgment, a
-corrected version of it, a schema-invalid variant and a malformed file — each with a comment
-stating the outcome it produces.
+Four demo documents are committed in [samples/demo](samples/demo): a valid judgment, a corrected
+version of it, a schema-invalid variant and a malformed file. Each states the outcome it produces.
 
 Submit one document (synchronous, returns the outcome):
 
@@ -60,13 +56,13 @@ Submit one document (synchronous, returns the outcome):
     curl -X POST localhost:8080/api/v1/documents \
       -H 'Content-Type: application/xml' \
       --data-binary @samples/demo/valid-judgment-corrected.xml
-    # {"contentId":"FR-2024-CC-000777","outcome":"SUPERSEDED","version":2,...}
+    # {"contentId":"FR-2024-CC-000777","outcome":"SUPERSEDED","version":2,"links":{...}}
 
     curl -X POST localhost:8080/api/v1/documents \
       -H 'Content-Type: application/xml' \
       --data-binary @samples/demo/invalid-date.xml
-    # 400 application/problem+json, outcome SCHEMA_INVALID, one diagnostic per problem
-    # with line, column and the cvc- error code
+    # 400 application/problem+json: outcome SCHEMA_INVALID, one diagnostic per problem with
+    # line, column and the cvc- error code
 
 Submit a batch (async, returns a batchId immediately):
 
@@ -74,7 +70,7 @@ Submit a batch (async, returns a batchId immediately):
             -H 'Content-Type: application/json' -d '{}' | jq -r .batchId)
     curl -s localhost:8080/api/v1/batches/$BATCH | jq
     # {"status":"COMPLETED","discovered":4,"processed":4,
-    #  "counts":{"PUBLISHED":1,"SUPERSEDED":1,"SCHEMA_INVALID":1,"MALFORMED_XML":1},...}
+    #  "counts":{"PUBLISHED":1,"SUPERSEDED":1,"SCHEMA_INVALID":1,"MALFORMED_XML":1}, ...}
 
 Check a document and fetch artifacts:
 
@@ -105,24 +101,24 @@ self-contained paragraph record per line, built for a downstream embedding pipel
 Notes from working through this brief; full reasoning in [SOLUTION.md](SOLUTION.md).
 
 - **Why the corpus pipeline matters here.** LexisNexis products are RAG systems grounded in curated
-  legal content; retrieval quality is bounded by corpus quality. Shaped three choices: validation as
-  a hard trust gate, paragraph IDs preserved as citation anchors, and the `chunks.jsonl` artifact
-  emitted specifically for embedding.
-- **Saxon-HE boundary.** Saxon-HE executes XSLT 3.0 but XSD validation and streaming XSLT are
+  legal content, and retrieval quality is bounded by corpus quality. Shaped three choices:
+  validation as a hard trust gate, paragraph IDs preserved as citation anchors, and the
+  `chunks.jsonl` artifact emitted specifically for embedding.
+- **Saxon-HE boundary.** Saxon-HE executes XSLT 3.0, but XSD validation and streaming XSLT are
   Saxon-EE features. Hence JDK (Xerces) validation plus Saxon-HE transformation, and a stated memory
   ceiling of one document tree per worker, bounded by `APP_MAX_DOC_BYTES` and `APP_CONCURRENCY`.
 - **XSLT 3.0 JSON.** The stylesheet builds the W3C JSON XML vocabulary and finishes with
-  `xml-to-json()`: the stylesheet never writes a brace or a quote, so malformed JSON and injection
-  are structurally impossible, and the intermediate tree is inspectable when output looks wrong.
-  Compiled `XsltExecutable` is thread-safe and built once; transformers are per-document.
-- **Idempotency model.** content_id + SHA-256 of received bytes. Identical resubmission: recorded
-  no-op. Same id, new content: version N+1 with supersession recorded, mirroring real legal feeds
-  (corrections, GDPR re-anonymisation of the same decision).
-- **French judgment structure.** facts / reasons (motifs, "Considérant/Attendu que") / disposition
+  `xml-to-json()`, so it never writes a brace or a quote and malformed JSON is structurally
+  impossible. The compiled `XsltExecutable` is thread-safe and built once; transformers are
+  per-document.
+- **Idempotency model.** content_id plus SHA-256 of received bytes. Identical resubmission is a
+  recorded no-op; same id with new content is version N+1 with supersession recorded, mirroring real
+  legal feeds such as corrections and GDPR re-anonymisation of the same decision.
+- **French judgment structure.** facts, reasons (motifs, "Considérant/Attendu que") and disposition
   (dispositif, "Par ces motifs"); ECLI and NOR are typed identifiers, kept structured as future
   citation-graph edges.
-- **Two findings that changed the design.** Disabling external entities but allowing DOCTYPE makes
-  Xerces *skip* the entity silently — the document publishes with text missing — so the DOCTYPE
-  declaration itself is refused, at the gate. And a multi-file publish needs a directory-level
-  commit, not four atomic file writes: otherwise a failure mid-publish leaves a partial version
-  sitting at its real name for the artifact endpoint to serve.
+- **Two findings that changed the design.** Disabling external entities while still allowing a
+  DOCTYPE makes Xerces skip the entity silently, so the document publishes with text missing; the
+  declaration itself is now refused, at the gate. And a multi-file publish needs a directory-level
+  commit rather than four atomic file writes, or a failure mid-publish leaves a partial version at
+  its real name for the artifact endpoint to serve.
