@@ -20,6 +20,14 @@ public record ValidationResult(Status status, List<Diagnostic> diagnostics) {
         VALID,
         /** Not well-formed XML at all: the parser could not get far enough to check the schema. */
         MALFORMED_XML,
+        /**
+         * The document carries a DOCTYPE declaration, which the pipeline refuses on sight.
+         *
+         * <p>Its own status rather than a flavour of MALFORMED_XML, because the two mean
+         * different things to whoever is on call: malformed XML is a broken sender, a DOCTYPE is
+         * a policy rejection and a spike in them is a security signal, not a feed-quality one.
+         */
+        DOCTYPE_REJECTED,
         /** Well-formed, but it violates the judgment schema. */
         SCHEMA_INVALID,
         /** Larger than APP_MAX_DOC_BYTES; rejected without being parsed. */
@@ -46,6 +54,22 @@ public record ValidationResult(Status status, List<Diagnostic> diagnostics) {
 
     static ValidationResult malformed(List<Diagnostic> diagnostics) {
         return new ValidationResult(Status.MALFORMED_XML, diagnostics);
+    }
+
+    /**
+     * Carries a stable code of our own rather than the parser's, since this rejection is the
+     * pipeline's policy rather than a finding about the XML. The parser's own message is kept
+     * alongside so the sender can see exactly what was refused and where.
+     */
+    static ValidationResult doctypeRejected(Diagnostic parserDiagnostic) {
+        return new ValidationResult(Status.DOCTYPE_REJECTED, List.of(new Diagnostic(
+                Diagnostic.Severity.FATAL,
+                parserDiagnostic.line(),
+                parserDiagnostic.column(),
+                "lex-doctype-not-allowed",
+                "A DOCTYPE declaration is not permitted: judgments are governed by the XSD and "
+                        + "have no legitimate use for a DTD. Resubmit without it. "
+                        + "Parser reported: " + parserDiagnostic.message())));
     }
 
     static ValidationResult oversize(long actualBytes, long limitBytes) {

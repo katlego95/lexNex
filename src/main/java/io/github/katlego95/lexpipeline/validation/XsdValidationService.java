@@ -1,12 +1,14 @@
 package io.github.katlego95.lexpipeline.validation;
 
 import io.github.katlego95.lexpipeline.config.AppProperties;
+import io.github.katlego95.lexpipeline.config.HardenedXmlReaderFactory;
 import io.github.katlego95.lexpipeline.validation.SizeLimitedInputStream.LimitExceededException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.List;
 import javax.xml.XMLConstants;
+import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
@@ -16,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXNotRecognizedException;
 import org.xml.sax.SAXNotSupportedException;
@@ -63,9 +66,12 @@ public class XsdValidationService {
 
     private final Schema schema;
     private final long maxDocBytes;
+    private final HardenedXmlReaderFactory readerFactory;
 
-    public XsdValidationService(AppProperties properties, ResourceLoader resourceLoader) {
+    public XsdValidationService(AppProperties properties, ResourceLoader resourceLoader,
+            HardenedXmlReaderFactory readerFactory) {
         this.maxDocBytes = properties.maxDocBytes();
+        this.readerFactory = readerFactory;
         this.schema = compileSchema(resourceLoader.getResource(properties.xsdPath()));
         log.info("XSD compiled from {} (max document size {} bytes)",
                 properties.xsdPath(), this.maxDocBytes);
@@ -95,7 +101,12 @@ public class XsdValidationService {
             Validator validator = schema.newValidator();
             harden(validator);
             validator.setErrorHandler(errorHandler);
-            validator.validate(new StreamSource(bounded));
+            // Parsed through the pipeline's shared hardened reader rather than the validator's
+            // own default parser, so the trust gate enforces exactly the policy the transform
+            // enforces later — including the DOCTYPE refusal, which belongs at the gate.
+            InputSource input = new InputSource(bounded);
+            input.setSystemId(document.getDescription());
+            validator.validate(new SAXSource(readerFactory.newReader(), input));
 
         } catch (LimitExceededException e) {
             return ValidationResult.oversize(-1, e.limit());
@@ -106,7 +117,10 @@ public class XsdValidationService {
             if (oversize != null) {
                 return ValidationResult.oversize(-1, oversize.limit());
             }
-            return ValidationResult.malformed(fallbackDiagnostics(errorHandler, e));
+            List<Diagnostic> diagnostics = fallbackDiagnostics(errorHandler, e);
+            return HardenedXmlReaderFactory.isDoctypeRejection(e)
+                    ? ValidationResult.doctypeRejected(diagnostics.get(0))
+                    : ValidationResult.malformed(diagnostics);
         } catch (IOException e) {
             LimitExceededException oversize = findLimitExceeded(e);
             if (oversize != null) {
@@ -116,7 +130,15 @@ public class XsdValidationService {
         }
 
         if (errorHandler.hasFatalError()) {
-            return ValidationResult.malformed(errorHandler.diagnostics());
+            List<Diagnostic> diagnostics = errorHandler.diagnostics();
+            Diagnostic doctype = diagnostics.stream()
+                    .filter(d -> d.message().contains(
+                            HardenedXmlReaderFactory.DISALLOW_DOCTYPE_FEATURE))
+                    .findFirst()
+                    .orElse(null);
+            return doctype != null
+                    ? ValidationResult.doctypeRejected(doctype)
+                    : ValidationResult.malformed(diagnostics);
         }
         if (errorHandler.hasErrors()) {
             return ValidationResult.schemaInvalid(errorHandler.diagnostics());

@@ -1,0 +1,22 @@
+{
+  "content_id": "FR-2024-CA-000123",
+  "title": "Cour d'appel de Paris, 12 mars 2024, n° 20/01234",
+  "court": "Cour d'appel de Paris",
+  "jurisdiction": "FR",
+  "decision_date": "2024-03-12",
+  "citations": [
+    {"type": "ECLI", "value": "ECLI:FR:CA12345"},
+    {"type": "NOR", "value": "NOR:ABCD1234567"}
+  ],
+  "parties": [
+    {"role": "appellant", "name": "Société ABC"},
+    {"role": "respondent", "name": "M. Dupont"}
+  ],
+  "paragraphs": [
+    {"id": "p1", "section": "facts", "text": "Le litige porte sur..."},
+    {"id": "p2", "section": "reasons", "text": "Considérant que..."},
+    {"id": "p3", "section": "reasons", "text": "Attendu que..."},
+    {"id": "p4", "section": "disposition", "text": "Par ces motifs..."}
+  ],
+  "full_text": "Le litige porte sur... Considérant que... Attendu que... Par ces motifs..."
+}

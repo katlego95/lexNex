@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Schema-valid with both optional containers omitted, and with paragraph text pretty-printed
+     across lines. Proves two things about the transform: optional containers still produce empty
+     arrays (stable artifact shape), and normalize-space collapses source formatting. -->
+<judgment xmlns="urn:lex:content:1">
+  <header>
+    <content_id>FR-2024-CC-000999</content_id>
+    <title>Cour de cassation, 5 juin 2024, n° 22/00999</title>
+    <court>Cour de cassation</court>
+    <jurisdiction>FR</jurisdiction>
+    <decision_date>2024-06-05</decision_date>
+  </header>
+  <body>
+    <section type="facts">
+      <p id="q1">
+        Le demandeur soutient
+        que la cour d'appel a violé
+        l'article 1240 du code civil.
+      </p>
+    </section>
+    <section type="disposition">
+      <p id="q2">Rejette le pourvoi.</p>
+    </section>
+  </body>
+</judgment>

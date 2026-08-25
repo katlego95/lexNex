@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import io.github.katlego95.lexpipeline.config.AppProperties;
+import io.github.katlego95.lexpipeline.config.HardenedXmlReaderFactory;
 import io.github.katlego95.lexpipeline.validation.ValidationResult.Status;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -27,8 +28,9 @@ class XsdValidationServiceTest {
 
     private static XsdValidationService serviceWithLimit(long maxDocBytes) {
         return new XsdValidationService(
-                new AppProperties("classpath:schema/judgment.xsd", maxDocBytes),
-                new DefaultResourceLoader());
+                new AppProperties("classpath:schema/judgment.xsd", "classpath:xslt/", maxDocBytes),
+                new DefaultResourceLoader(),
+                new HardenedXmlReaderFactory());
     }
 
     private static Resource sample(String name) {
@@ -200,22 +202,50 @@ class XsdValidationServiceTest {
 
         /**
          * The payload declares an external entity pointing at a local file and references it in a
-         * paragraph. Hardened, the parser refuses to fetch it; unhardened, the file contents would
-         * be substituted into content we transform, index and serve.
+         * paragraph. It is refused at the gate, on the DOCTYPE, before the entity is even read —
+         * unhardened, the file contents would be substituted into content we transform, index
+         * and serve.
          */
         @Test
-        void externalEntityIsNotResolved() {
+        void aDoctypeIsRejectedAtTheGateWithItsOwnStatus() {
             ValidationResult result = service.validate(sample("xxe-external-entity.xml"));
 
             assertThat(result.valid()).isFalse();
-            // Refusing to fetch the entity leaves the reference undeclared, which is a
-            // well-formedness failure — so the payload lands in MALFORMED_XML, not SCHEMA_INVALID.
-            assertThat(result.status()).isEqualTo(Status.MALFORMED_XML);
+            // Its own status, not MALFORMED_XML: this is a policy rejection, and it must be
+            // attributed to the stage whose job it is rather than surfacing later as a transform
+            // failure with nothing useful in the quarantine record.
+            assertThat(result.status()).isEqualTo(Status.DOCTYPE_REJECTED);
+        }
+
+        @Test
+        void theRejectionCarriesAnActionableDiagnostic() {
+            ValidationResult result = service.validate(sample("xxe-external-entity.xml"));
+
             assertThat(result.diagnostics())
-                    .isNotEmpty()
-                    .extracting(Diagnostic::message)
-                    .anySatisfy(message ->
-                            assertThat(message).containsIgnoringCase("accessExternalDTD"));
+                    .singleElement()
+                    .satisfies(d -> {
+                        assertThat(d.code()).isEqualTo("lex-doctype-not-allowed");
+                        assertThat(d.severity()).isEqualTo(Diagnostic.Severity.FATAL);
+                        assertThat(d.message())
+                                .contains("DOCTYPE")
+                                .contains("Resubmit without it");
+                        assertThat(d.line()).isPositive();
+                    });
+        }
+
+        /** A DOCTYPE with no entities at all is still refused: the rule is the declaration. */
+        @Test
+        void anInnocuousDoctypeIsRejectedToo() {
+            String xml = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <!DOCTYPE judgment>
+                    <judgment xmlns="urn:lex:content:1"/>
+                    """;
+
+            ValidationResult result = service.validate(
+                    new ByteArrayResource(xml.getBytes(StandardCharsets.UTF_8)));
+
+            assertThat(result.status()).isEqualTo(Status.DOCTYPE_REJECTED);
         }
 
         @Test
@@ -225,6 +255,16 @@ class XsdValidationServiceTest {
             assertThat(result.diagnostics())
                     .extracting(Diagnostic::message)
                     .noneSatisfy(message -> assertThat(message).contains("root:"));
+        }
+
+        /**
+         * Ordinary malformed XML must not be swept into DOCTYPE_REJECTED: the two statuses have
+         * to keep meaning different things for the quarantine record to be worth reading.
+         */
+        @Test
+        void ordinaryMalformedInputKeepsItsOwnStatus() {
+            assertThat(service.validate(sample("malformed.xml")).status())
+                    .isEqualTo(Status.MALFORMED_XML);
         }
     }
 
