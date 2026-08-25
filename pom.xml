@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    Spring Boot 3.x (not 4.x): the brief specifies Boot 3. Pinning the parent to a
+    concrete 3.5.x patch keeps the dependency set reproducible for a reviewer.
+  -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.5.16</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>io.github.katlego95</groupId>
+  <artifactId>lexpipeline</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>lexpipeline</name>
+  <description>Legal content transformation service: validate, transform, publish French judgment XML</description>
+
+  <properties>
+    <java.version>21</java.version>
+    <!-- Saxon-HE is the only XSLT 3.0 processor available under an open licence;
+         the JDK ships Xalan, which is XSLT 1.0 only (no xml-to-json, no maps). -->
+    <saxon.version>12.9</saxon.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <!-- Scrapes to /actuator/prometheus; the metrics in ARCHITECTURE section 8 land here. -->
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- XSLT 3.0 transformation. Validation deliberately does NOT use Saxon:
+         XSD validation is a Saxon-EE feature, so validation uses the JDK's
+         javax.xml.validation (Xerces) instead. -->
+    <dependency>
+      <groupId>net.sf.saxon</groupId>
+      <artifactId>Saxon-HE</artifactId>
+      <version>${saxon.version}</version>
+    </dependency>
+
+    <!-- Brings JUnit 5, AssertJ, JSONAssert, Hamcrest, Mockito, spring-test. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: lexpipeline
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Health for liveness, metrics/prometheus for the pipeline counters and timers
+        # added in later phases (documents_published_total, pipeline_stage_duration_seconds).
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,22 @@
+# Build output — the image build produces its own
+target/
+
+# Version control and IDE noise
+.git/
+.gitignore
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Planning, study and AI tooling: never leaves the working folder, never enters an image
+CLAUDE.md
+.claude/
+ARCHITECTURE.md
+0*.md
+notes/
+
+# Local runtime data
+data/
+out/
+*.log

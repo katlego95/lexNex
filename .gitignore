@@ -22,3 +22,28 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Build and IDE
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.DS_Store
+
+# Never committed: planning docs, study material and AI tooling
+CLAUDE.md
+.claude/
+ARCHITECTURE.md
+02_ARCHITECTURE.md
+0*.md
+notes/
+
+# Local runtime data (input drop folder, artifact store)
+data/
+out/
