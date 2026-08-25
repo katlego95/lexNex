@@ -6,6 +6,7 @@ spring:
 app:
   xsd-path: ${APP_XSD_PATH:classpath:schema/judgment.xsd}
   xslt-path: ${APP_XSLT_PATH:classpath:xslt/}    # directory: one stylesheet per artifact
+  output-dir: ${APP_OUTPUT_DIR:./data/out}       # published/ and quarantine/ live here
   max-doc-bytes: ${APP_MAX_DOC_BYTES:10485760}   # 10 MiB
 
 server:

@@ -15,11 +15,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *                     the pipeline produces more than one artifact, so this is a base location
  *                     rather than a single file, and each stylesheet is resolved by name beneath
  *                     it. Env var {@code APP_XSLT_PATH}.
+ * @param outputDir    root of the artifact store: {@code published/} and {@code quarantine/} are
+ *                     created beneath it. A plain filesystem path, not a Spring resource location,
+ *                     because this one is written to as well as read. Env var
+ *                     {@code APP_OUTPUT_DIR}.
  * @param maxDocBytes  hard ceiling on a single document, enforced before any parsing begins.
  *                     Env var {@code APP_MAX_DOC_BYTES}.
  */
 @ConfigurationProperties(prefix = "app")
-public record AppProperties(String xsdPath, String xsltPath, long maxDocBytes) {
+public record AppProperties(String xsdPath, String xsltPath, String outputDir, long maxDocBytes) {
 
     /** Tolerates {@code classpath:xslt} as well as {@code classpath:xslt/} in the env var. */
     public String xsltPath() {
