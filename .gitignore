@@ -36,12 +36,9 @@ target/
 .project
 .DS_Store
 
-# Never committed: planning docs, study material and AI tooling
-CLAUDE.md
+# Submitted deliberately: CLAUDE.md (AI tooling instructions) and 02_ARCHITECTURE.md (design plan).
+# Study material and local AI state stay out.
 .claude/
-ARCHITECTURE.md
-02_ARCHITECTURE.md
-0*.md
 notes/
 
 # Local runtime data (input drop folder, artifact store)
